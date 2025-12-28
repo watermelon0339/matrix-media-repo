@@ -70,6 +70,6 @@ RUN dos2unix /usr/local/bin/run.sh && chmod 744 /usr/local/bin/run.sh
 
 ENV REPO_CONFIG=/data/media-repo.yaml
 
-CMD /usr/local/bin/run.sh
+CMD ["/usr/local/bin/run.sh"]
 VOLUME ["/data", "/media"]
 EXPOSE 8000
