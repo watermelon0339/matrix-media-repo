@@ -13,6 +13,7 @@
 /dev/thumb_*
 /vcpkg
 /libheif
+/tmp
 
 # Generated files
 assets.bin.go

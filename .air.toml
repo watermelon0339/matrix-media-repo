@@ -1,0 +1,12 @@
+#:schema https://json.schemastore.org/any.json
+
+root = "."
+tmp_dir = ".tmp"
+
+[build]
+cmd = "go build -o ./.tmp/media_repo ./cmd/workers/media_repo"
+bin = "./.tmp/media_repo"
+full_bin = "./.tmp/media_repo -config ./media-repo-dev.yaml"
+include_ext = ["go"]
+exclude_dir = [".tmp",".vscode",".github", ".git",  "bin", "dev","test"]
+delay = 1000

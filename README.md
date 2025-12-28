@@ -54,3 +54,96 @@ for database management - use at your own risk.
 
 **Note**: Running the Go tests requires Docker, and may pollute your cached images with tons of layers. It is suggested to
 clean these images up manually from time to time, or rely on an ephemeral build system instead.
+
+### Dev with VS Code
+
+#### Install go
+
+```bash
+sudo apt update
+sudo apt install golang-go
+```
+
+#### Build libheif
+
+```bash
+# matrix-media-repo
+cd ../
+bash ./matrix-media-repo/.github/workflows/build-libheif.sh
+```
+
+#### Run test synapse
+
+
+```bash
+docker run --rm -it -v ./dev/synapse-db:/data -e SYNAPSE_SERVER_NAME=localhost -e SYNAPSE_REPORT_STATS=no matrixdotorg/synapse:latest generate
+
+docker compose -f dev/docker-compose.yaml up -d
+```
+
+#### Install `air` for hot-reloading
+
+```bash
+go install github.com/cosmtrek/air@latest
+# If your Go version is lower than 1.25, add the following lines to your ~/.bashrc.
+export PATH="$HOME/go/bin/:$PATH"
+```
+
+```bash
+cp config.sample.yaml media-repo-dev.yaml
+```
+
+and edit `media-repo-dev.yaml` as follow:
+```yaml
+repo:
+  bindAddress: '' # listen all
+  port: 8001
+database:
+  postgres: "postgres://postgres:test1234@localhost/postgres?sslmode=disable"
+homeservers:
+  - # Keep the dash from this line.
+    name: localhost
+    csApi: "http://localhost:8008"
+admins:
+  - "@admin:localhost"
+sharedSecretAuth:
+  enabled: true
+  token: "PutSomeRandomSecureValueHere"
+datastores:
+  - type: s3
+    id: "ANOTHER_UNIQUE_ID_HERE"
+    forKinds: ["thumbnails", "remote_media", "local_media", "archives"]
+    opts:
+      tempPath: "/tmp/mediarepo_s3_upload"
+      endpoint: xxx.r2.cloudflarestorage.com
+      accessKeyId: "xxx"
+      accessSecret: "xxx"
+      ssl: true
+      bucketName: "xxx"
+      region: "auto"
+redis:
+  enabled: true
+  databaseNumber: 0
+  shards:
+    - name: "server1"
+      addr: "127.0.0.1:7001"
+    - name: "server2"
+      addr: "127.0.0.1:7002"
+    - name: "server3"
+      addr: "127.0.0.1:7003"
+```
+
+```bash
+# start hot-reloading
+cd matrix-media-repo
+air
+```
+
+### Debug
+
+```bash
+# install delve
+sudo apt install delve
+
+# then Run and Debug in VS Code
+```

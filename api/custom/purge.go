@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/t2bot/matrix-media-repo/api/_apimeta"
@@ -16,6 +18,7 @@ import (
 	"github.com/t2bot/matrix-media-repo/common"
 	"github.com/t2bot/matrix-media-repo/common/rcontext"
 	"github.com/t2bot/matrix-media-repo/matrix"
+	"github.com/t2bot/matrix-media-repo/redislib"
 	"github.com/t2bot/matrix-media-repo/util"
 )
 
@@ -23,7 +26,33 @@ type MediaPurgedResponse struct {
 	NumRemoved int `json:"total_removed"`
 }
 
+var purgeMu sync.Mutex
+
+// acquirePurgeLock obtains a distributed Redis lock if available, otherwise
+// falls back to a process-local mutex. It returns an unlock function and a
+// boolean indicating success.
+func acquirePurgeLock() (func(), bool) {
+	// Use a global purge key to serialize all admin purge operations.
+	m := redislib.GetMutex("admin-purge-global", 24*time.Hour)
+	if m != nil {
+		if err := m.Lock(); err == nil {
+			return func() { _, _ = m.Unlock() }, true
+		}
+		return nil, false
+	}
+
+	if purgeMu.TryLock() {
+		return func() { purgeMu.Unlock() }, true
+	}
+	return nil, false
+}
+
 func PurgeRemoteMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
 	beforeTsStr := r.URL.Query().Get("before_ts")
 	if beforeTsStr == "" {
 		return _responses.BadRequest("Missing before_ts argument")
@@ -49,6 +78,11 @@ func PurgeRemoteMedia(r *http.Request, rctx rcontext.RequestContext, user _apime
 }
 
 func PurgeIndividualRecord(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
 	authCtx, _, _ := getPurgeAuthContext(rctx, r, user)
 
 	server := _routers.GetParam("server", r)
@@ -82,6 +116,11 @@ func PurgeIndividualRecord(r *http.Request, rctx rcontext.RequestContext, user _
 }
 
 func PurgeQuarantined(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
 	authCtx, isGlobalAdmin, isLocalAdmin := getPurgeAuthContext(rctx, r, user)
 
 	var affected []*database.DbMedia
@@ -117,6 +156,11 @@ func PurgeQuarantined(r *http.Request, rctx rcontext.RequestContext, user _apime
 }
 
 func PurgeOldMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
 	var err error
 	beforeTs := util.NowMillis()
 	beforeTsStr := r.URL.Query().Get("before_ts")
@@ -169,7 +213,70 @@ func PurgeOldMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta.
 	return &_responses.DoNotCacheResponse{Payload: map[string]interface{}{"purged": true, "affected": mxcs}}
 }
 
+func PurgeOldMediaByAccess(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
+	var err error
+	beforeTs := util.NowMillis()
+	beforeTsStr := r.URL.Query().Get("before_ts")
+	if beforeTsStr != "" {
+		beforeTs, err = strconv.ParseInt(beforeTsStr, 10, 64)
+		if err != nil {
+			return _responses.BadRequest("Error parsing before_ts: " + err.Error())
+		}
+	}
+
+	includeLocal := false
+	includeLocalStr := r.URL.Query().Get("include_local")
+	if includeLocalStr != "" {
+		includeLocal, err = strconv.ParseBool(includeLocalStr)
+		if err != nil {
+			return _responses.BadRequest("Error parsing include_local: " + err.Error())
+		}
+	}
+
+	rctx = rctx.LogWithFields(logrus.Fields{
+		"before_ts":     beforeTs,
+		"include_local": includeLocal,
+	})
+
+	excludeDomains := make([]string, 0)
+	if !includeLocal {
+		excludeDomains = util.GetOurDomains()
+	}
+
+	mediaDb := database.GetInstance().Media.Prepare(rctx)
+	records, err := mediaDb.GetOldByLastAccessExcluding(excludeDomains, beforeTs)
+	if err != nil {
+		rctx.Log.Error(err)
+		sentry.CaptureException(err)
+		return _responses.InternalServerError("error fetching media records")
+	}
+
+	mxcs, err := task_runner.PurgeMedia(rctx, &task_runner.PurgeAuthContext{}, &task_runner.QuarantineThis{
+		DbMedia: records,
+	})
+	if err != nil {
+		if errors.Is(err, common.ErrWrongUser) {
+			return _responses.AuthFailed()
+		}
+		rctx.Log.Error(err)
+		sentry.CaptureException(err)
+		return _responses.InternalServerError("unexpected error")
+	}
+
+	return &_responses.DoNotCacheResponse{Payload: map[string]interface{}{"purged": true, "affected": mxcs}}
+}
+
 func PurgeUserMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
 	authCtx, isGlobalAdmin, isLocalAdmin := getPurgeAuthContext(rctx, r, user)
 	if !isGlobalAdmin && !isLocalAdmin {
 		return _responses.AuthFailed()
@@ -227,6 +334,11 @@ func PurgeUserMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta
 }
 
 func PurgeRoomMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
 	authCtx, isGlobalAdmin, isLocalAdmin := getPurgeAuthContext(rctx, r, user)
 	if !isGlobalAdmin && !isLocalAdmin {
 		return _responses.AuthFailed()
@@ -300,6 +412,11 @@ func PurgeRoomMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta
 }
 
 func PurgeDomainMedia(r *http.Request, rctx rcontext.RequestContext, user _apimeta.UserInfo) interface{} {
+	unlock, ok := acquirePurgeLock()
+	if !ok {
+		return &_responses.ErrorResponse{Code: common.ErrCodeUnknown, Message: "Another purge is in progress", InternalCode: common.ErrCodeCannotOverwrite}
+	}
+	defer unlock()
 	authCtx, isGlobalAdmin, isLocalAdmin := getPurgeAuthContext(rctx, r, user)
 	if !isGlobalAdmin && !isLocalAdmin {
 		return _responses.AuthFailed()

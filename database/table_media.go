@@ -44,6 +44,7 @@ const selectMediaByUserCount = "SELECT COUNT(*) FROM media WHERE user_id = $1;"
 const selectMediaByOriginAndUserIds = "SELECT origin, media_id, upload_name, content_type, user_id, sha256_hash, size_bytes, creation_ts, quarantined, datastore_id, location FROM media WHERE origin = $1 AND user_id = ANY($2);"
 const selectMediaByOriginAndIds = "SELECT origin, media_id, upload_name, content_type, user_id, sha256_hash, size_bytes, creation_ts, quarantined, datastore_id, location FROM media WHERE origin = $1 AND media_id = ANY($2);"
 const selectOldMediaExcludingDomains = "SELECT m.origin, m.media_id, m.upload_name, m.content_type, m.user_id, m.sha256_hash, m.size_bytes, m.creation_ts, m.quarantined, m.datastore_id, m.location FROM media AS m WHERE (m.origin <> ANY($1) OR CARDINALITY($1) = 0) AND m.creation_ts < $2 AND (SELECT COUNT(d.*) FROM media AS d WHERE d.sha256_hash = m.sha256_hash AND d.creation_ts >= $2) = 0 AND (SELECT COUNT(d.*) FROM media AS d WHERE d.sha256_hash = m.sha256_hash AND d.origin = ANY($1)) = 0;"
+const selectOldMediaByLastAccessExcludingDomains = "SELECT m.origin, m.media_id, m.upload_name, m.content_type, m.user_id, m.sha256_hash, m.size_bytes, m.creation_ts, m.quarantined, m.datastore_id, m.location FROM media AS m LEFT JOIN last_access AS a ON a.sha256_hash = m.sha256_hash WHERE (m.origin <> ANY($1) OR CARDINALITY($1) = 0) AND ((a.last_access_ts < $2) OR (a.sha256_hash IS NULL AND m.creation_ts < $2)) AND (SELECT COUNT(d.*) FROM media AS d WHERE d.sha256_hash = m.sha256_hash AND d.creation_ts >= $2) = 0 AND (SELECT COUNT(d.*) FROM media AS d WHERE d.sha256_hash = m.sha256_hash AND d.origin = ANY($1)) = 0;"
 const deleteMedia = "DELETE FROM media WHERE origin = $1 AND media_id = $2;"
 const updateMediaLocation = "UPDATE media SET datastore_id = $3, location = $4 WHERE datastore_id = $1 AND location = $2;"
 const selectMediaByLocation = "SELECT origin, media_id, upload_name, content_type, user_id, sha256_hash, size_bytes, creation_ts, quarantined, datastore_id, location FROM media WHERE datastore_id = $1 AND location = $2;"
@@ -66,6 +67,7 @@ type mediaTableStatements struct {
 	selectMediaByOriginAndUserIds    *sql.Stmt
 	selectMediaByOriginAndIds        *sql.Stmt
 	selectOldMediaExcludingDomains   *sql.Stmt
+	selectOldMediaByLastAccessExcludingDomains *sql.Stmt
 	deleteMedia                      *sql.Stmt
 	updateMediaLocation              *sql.Stmt
 	selectMediaByLocation            *sql.Stmt
@@ -126,6 +128,9 @@ func prepareMediaTables(db *sql.DB) (*mediaTableStatements, error) {
 	}
 	if stmts.selectOldMediaExcludingDomains, err = db.Prepare(selectOldMediaExcludingDomains); err != nil {
 		return nil, errors.New("error preparing selectOldMediaExcludingDomains: " + err.Error())
+	}
+	if stmts.selectOldMediaByLastAccessExcludingDomains, err = db.Prepare(selectOldMediaByLastAccessExcludingDomains); err != nil {
+		return nil, errors.New("error preparing selectOldMediaByLastAccessExcludingDomains: " + err.Error())
 	}
 	if stmts.deleteMedia, err = db.Prepare(deleteMedia); err != nil {
 		return nil, errors.New("error preparing deleteMedia: " + err.Error())
@@ -235,6 +240,10 @@ func (s *MediaTableWithContext) GetByIds(origin string, mediaIds []string) ([]*D
 
 func (s *MediaTableWithContext) GetOldExcluding(origins []string, beforeTs int64) ([]*DbMedia, error) {
 	return s.scanRows(s.statements.selectOldMediaExcludingDomains.QueryContext(s.ctx, pq.Array(origins), beforeTs))
+}
+
+func (s *MediaTableWithContext) GetOldByLastAccessExcluding(origins []string, beforeTs int64) ([]*DbMedia, error) {
+	return s.scanRows(s.statements.selectOldMediaByLastAccessExcludingDomains.QueryContext(s.ctx, pq.Array(origins), beforeTs))
 }
 
 func (s *MediaTableWithContext) GetByLocation(datastoreId string, location string) ([]*DbMedia, error) {

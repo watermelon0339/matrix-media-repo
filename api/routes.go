@@ -77,6 +77,7 @@ func buildRoutes() http.Handler {
 	purgeBranch := branchedRoute([]branch{
 		{"remote", purgeRemoteRoute},
 		{"old", makeRoute(_routers.RequireRepoAdmin(custom.PurgeOldMedia), "purge_old_media", counter)},
+		{"by_access", makeRoute(_routers.RequireRepoAdmin(custom.PurgeOldMediaByAccess), "purge_old_media_by_access", counter)},
 		{"quarantined", makeRoute(_routers.RequireAccessToken(custom.PurgeQuarantined, false), "purge_quarantined", counter)},
 		{"user/:userId", makeRoute(_routers.RequireAccessToken(custom.PurgeUserMedia, false), "purge_user_media", counter)},
 		{"room/:roomId", makeRoute(_routers.RequireAccessToken(custom.PurgeRoomMedia, false), "purge_room_media", counter)},

@@ -220,8 +220,9 @@ func doPurge(ctx rcontext.RequestContext, records []*database.DbMedia, config *p
 				}
 			}
 		}
+		// TODO delete last access records?
 	}
-
+	ctx.Log.Debug("Stage 3 of purge complete")
 	// Finally, we're done
 	return removedMxcs, nil
 }

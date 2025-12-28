@@ -8,7 +8,7 @@ Media in the media repo can have attributes associated with it.
 
 Currently the only attribute is a purpose, which defines how the media repo is to treat the media. By default this is set
 to `none`, meaning the media repo will not treat it as special in any way. Setting the purpose to `pinned` will prevent
-the media from being quarantined, but not purged.
+the media from being quarantined and purged.
 
 #### Get media attributes
 
@@ -18,7 +18,7 @@ The response will be the current attributes for the media.
 
 #### Set media attributes
 
-URL: `POST /_matrix/media/unstable/admin/media/<server>/<media id>/attributes/set?access_token=your_access_token`
+URL: `POST /_matrix/media/unstable/admin/media/<server>/<media id>/attributes?access_token=your_access_token`
 
 The request body will be the new attributes for the media. It is recommended to first get the attributes before setting them.
 
@@ -70,9 +70,17 @@ URL: `POST /_matrix/media/unstable/admin/purge/server/<server name>?before_ts=12
 
 This will delete all media known to be uploaded by that server, regardless of it being local or remote, before the timestamp specified. If called by a homeserver administrator, only media uploaded to their domain will be deleted.
 
-#### Purge media that hasn't been accessed in a while
+#### Purge media that hasn't been accessed in a while by `creation_ts`
 
 URL: `POST /_matrix/media/unstable/admin/purge/old?before_ts=1234567890&include_local=false&access_token=your_access_token` (`before_ts` is in milliseconds)
+
+This will delete all media that hasn't been accessed since `before_ts` (defaults to 'now'). If `include_local` is `false` (the default), only remote media will be deleted.
+
+This endpoint is only available to repository administrators.
+
+### Purge media that hasn't been accessed in a while by `last_access_ts`
+
+URL: `POST /_matrix/media/unstable/admin/purge/by_access?before_ts=1234567890&include_local=false&access_token=your_access_token` (`before_ts` is in milliseconds)
 
 This will delete all media that hasn't been accessed since `before_ts` (defaults to 'now'). If `include_local` is `false` (the default), only remote media will be deleted.
 
