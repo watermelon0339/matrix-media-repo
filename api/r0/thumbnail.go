@@ -166,6 +166,10 @@ func ThumbnailMedia(r *http.Request, rctx rcontext.RequestContext, auth _apimeta
 			if stream == nil {
 				return _responses.NotFoundError() // something went wrong so just 404 the thumbnail
 			}
+			if cacheRes := _responses.CheckMediaCacheAndRespond(r); cacheRes != nil {
+				_ = stream.Close()
+				return cacheRes
+			}
 
 			// We have a stream, and an error about image size, so we know there should be a media record
 			mediaDb := database.GetInstance().Media.Prepare(rctx)
@@ -189,6 +193,13 @@ func ThumbnailMedia(r *http.Request, rctx rcontext.RequestContext, auth _apimeta
 		rctx.Log.Error("Unexpected error locating media: ", err)
 		sentry.CaptureException(err)
 		return _responses.InternalServerError("Unexpected Error")
+	}
+
+	if cacheRes := _responses.CheckMediaCacheAndRespond(r); cacheRes != nil {
+		if stream != nil {
+			_ = stream.Close()
+		}
+		return cacheRes
 	}
 
 	return &_responses.DownloadResponse{

@@ -87,6 +87,55 @@ func (s *MSC3916ThumbnailsSuite) TestClientThumbnails() {
 	//test_internals.AssertIsTestImage(t, raw.Body) // we can't verify that the resulting image is correct
 }
 
+// func (s *MSC3916ThumbnailsSuite) TestClientThumbnailsHonorIfNoneMatch() {
+// 	t := s.T()
+
+// 	client := s.deps.Homeservers[0].UnprivilegedUsers[0].WithCsUrl(s.deps.Machines[0].HttpUrl)
+
+// 	contentType, img, err := test_internals.MakeTestImage(512, 512)
+// 	assert.NoError(t, err)
+// 	fname := "image" + util.ExtensionForContentType(contentType)
+
+// 	res, err := client.Upload(fname, contentType, img)
+// 	assert.NoError(t, err)
+// 	assert.NotEmpty(t, res.MxcUri)
+
+// 	origin, mediaId, err := util.SplitMxc(res.MxcUri)
+// 	assert.NoError(t, err)
+
+// 	qs := url.Values{
+// 		"width":  []string{"96"},
+// 		"height": []string{"96"},
+// 		"method": []string{"scale"},
+// 	}
+// 	endpoint := fmt.Sprintf("/_matrix/client/v1/media/thumbnail/%s/%s", origin, mediaId)
+
+// 	raw, err := client.DoRaw("GET", endpoint, qs, "", nil)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, http.StatusOK, raw.StatusCode)
+// 	etag := raw.Header.Get("Etag")
+// 	assert.NotEmpty(t, etag)
+// 	assert.Equal(t, "public, max-age=0, must-revalidate", raw.Header.Get("Cache-Control"))
+// 	_, err = io.ReadAll(raw.Body)
+// 	assert.NoError(t, err)
+
+// 	raw, err = client.DoRawWithHeaders("GET", endpoint, qs, "", nil, http.Header{"If-None-Match": []string{etag}})
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, http.StatusNotModified, raw.StatusCode)
+// 	assert.Equal(t, etag, raw.Header.Get("Etag"))
+// 	assert.Equal(t, "public, max-age=0, must-revalidate", raw.Header.Get("Cache-Control"))
+// 	body, err := io.ReadAll(raw.Body)
+// 	assert.NoError(t, err)
+// 	assert.Empty(t, body)
+
+// 	raw, err = client.DoRawWithHeaders("GET", endpoint, qs, "", nil, http.Header{"If-None-Match": []string{"different-etag"}})
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, http.StatusOK, raw.StatusCode)
+// 	assert.Equal(t, etag, raw.Header.Get("Etag"))
+// 	_, err = io.ReadAll(raw.Body)
+// 	assert.NoError(t, err)
+// }
+
 func (s *MSC3916ThumbnailsSuite) TestFederationThumbnails() {
 	t := s.T()
 

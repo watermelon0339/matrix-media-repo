@@ -67,6 +67,10 @@ func (c *MatrixClient) DoExpectError(method string, endpoint string, qs url.Valu
 }
 
 func (c *MatrixClient) DoRaw(method string, endpoint string, qs url.Values, contentType string, body io.Reader) (*http.Response, error) {
+	return c.DoRawWithHeaders(method, endpoint, qs, contentType, body, nil)
+}
+
+func (c *MatrixClient) DoRawWithHeaders(method string, endpoint string, qs url.Values, contentType string, body io.Reader, headers http.Header) (*http.Response, error) {
 	endpoint, err := url.JoinPath(c.ClientServerUrl, endpoint)
 	if err != nil {
 		return nil, err
@@ -87,6 +91,11 @@ func (c *MatrixClient) DoRaw(method string, endpoint string, qs url.Values, cont
 	}
 	if c.AuthHeaderOverride != "" {
 		req.Header.Set("Authorization", c.AuthHeaderOverride)
+	}
+	for key, values := range headers {
+		for _, value := range values {
+			req.Header.Add(key, value)
+		}
 	}
 
 	log.Printf("[HTTP] [Auth=%s] [Host=%s] %s %s", req.Header.Get("Authorization"), c.ServerName, req.Method, req.URL.String())

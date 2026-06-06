@@ -76,9 +76,13 @@ bash ./matrix-media-repo/.github/workflows/build-libheif.sh
 
 
 ```bash
+# first-time setup
 docker run --rm -it -v ./dev/synapse-db:/data -e SYNAPSE_SERVER_NAME=localhost -e SYNAPSE_REPORT_STATS=no matrixdotorg/synapse:latest generate
 
+# start element-web / synapse
 docker compose -f dev/docker-compose.yaml up -d
+
+# -> http://localhost:8008
 ```
 
 #### Install `air` for hot-reloading
@@ -146,4 +150,10 @@ air
 sudo apt install delve
 
 # then Run and Debug in VS Code
+```
+
+### Publish to docker
+
+```bash
+./publish.sh --build --publish
 ```

@@ -4,6 +4,8 @@ import "io"
 
 type EmptyResponse struct{}
 
+type NotModifiedResponse struct{}
+
 type HtmlResponse struct {
 	HTML string
 }

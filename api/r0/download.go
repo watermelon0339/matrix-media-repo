@@ -123,6 +123,13 @@ func DownloadMedia(r *http.Request, rctx rcontext.RequestContext, auth _apimeta.
 		filename = media.UploadName
 	}
 
+	if cacheRes := _responses.CheckMediaCacheAndRespond(r); cacheRes != nil {
+		if stream != nil {
+			_ = stream.Close()
+		}
+		return cacheRes
+	}
+
 	return &_responses.DownloadResponse{
 		ContentType:       media.ContentType,
 		Filename:          filename,

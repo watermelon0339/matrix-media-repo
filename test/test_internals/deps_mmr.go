@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -41,7 +41,7 @@ type mmrContainer struct {
 
 func writeMmrConfig(tmplArgs mmrTmplArgs) (string, error) {
 	// Prepare a config template
-	t, err := template.New("mmr.config.yaml").ParseFiles(path.Join(".", "test", "templates", "mmr.config.yaml"))
+	t, err := template.New("mmr.config.yaml").ParseFiles(filepath.Join(repoRootDir(), "test", "templates", "mmr.config.yaml"))
 	if err != nil {
 		return "", err
 	}

@@ -64,6 +64,12 @@ func (c *RContextRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	headers := w.Header()
 
+	if _, isNotModified := res.(*_responses.NotModifiedResponse); isNotModified {
+		_responses.SetMediaCacheControlHeaders(headers)
+		r = writeStatusCode(w, r, http.StatusNotModified)
+		return
+	}
+
 	// Check for redirection early
 	if redirect, isRedirect := res.(*_responses.RedirectResponse); isRedirect {
 		log.Infof("Replying with result: %T <%s>", res, redirect.ToUrl)
@@ -129,7 +135,8 @@ beforeParseDownload:
 		}
 
 		if shouldCache {
-			headers.Set("Cache-Control", "private, max-age=259200") // 3 days
+			// headers.Set("Cache-Control", "private, max-age=259200") // 3 days
+			_responses.SetMediaCacheControlHeaders(headers)
 		}
 
 		if downloadRes.SizeBytes > 0 {

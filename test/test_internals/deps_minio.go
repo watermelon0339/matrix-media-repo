@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -69,7 +69,7 @@ func MakeMinio(depNet *NetworkDep) (*MinioDep, error) {
 	}
 
 	// Prepare the test script
-	t, err := template.New("minio-config.sh").ParseFiles(path.Join(".", "test", "templates", "minio-config.sh"))
+	t, err := template.New("minio-config.sh").ParseFiles(filepath.Join(repoRootDir(), "test", "templates", "minio-config.sh"))
 	if err != nil {
 		return nil, err
 	}

@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -62,7 +62,7 @@ func MakeSynapse(domainName string, depNet *NetworkDep, signingKeyFilePath strin
 	}
 
 	// Prepare the synapse config
-	t, err := template.New("synapse.homeserver.yaml").ParseFiles(path.Join(".", "test", "templates", "synapse.homeserver.yaml"))
+	t, err := template.New("synapse.homeserver.yaml").ParseFiles(filepath.Join(repoRootDir(), "test", "templates", "synapse.homeserver.yaml"))
 	if err != nil {
 		return nil, err
 	}
@@ -108,10 +108,6 @@ func MakeSynapse(domainName string, depNet *NetworkDep, signingKeyFilePath strin
 	if err != nil {
 		return nil, err
 	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
 	synContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "ghcr.io/element-hq/synapse:v1.121.1",
@@ -119,7 +115,7 @@ func MakeSynapse(domainName string, depNet *NetworkDep, signingKeyFilePath strin
 			Mounts: []testcontainers.ContainerMount{
 				testcontainers.BindMount(f.Name(), "/data/homeserver.yaml"),
 				testcontainers.BindMount(signingKeyFilePath, "/data/signing.key"),
-				testcontainers.BindMount(path.Join(cwd, ".", "test", "templates", "synapse.log.config"), "/data/log.config"),
+				testcontainers.BindMount(filepath.Join(repoRootDir(), "test", "templates", "synapse.log.config"), "/data/log.config"),
 				testcontainers.BindMount(d, "/app"),
 			},
 			WaitingFor: wait.ForHTTP("/health").WithPort(p),

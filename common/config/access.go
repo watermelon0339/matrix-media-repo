@@ -144,6 +144,10 @@ func reloadConfig() (*MainRepoConfig, map[string]*DomainRepoConfig, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	err = validateMainConfig(&c)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Start building domain configs
 	dMaps := make(map[string]map[string]interface{})
@@ -194,6 +198,17 @@ func reloadConfig() (*MainRepoConfig, map[string]*DomainRepoConfig, error) {
 	}
 
 	return &c, domainConfs, nil
+}
+
+func validateMainConfig(c *MainRepoConfig) error {
+	if c.CacheControl.MaxAgeSeconds < 0 {
+		return fmt.Errorf("cacheControl.maxAgeSeconds must be greater than or equal to 0")
+	}
+	if c.CacheControl.SMaxAgeSeconds < 0 {
+		return fmt.Errorf("cacheControl.sMaxAgeSeconds must be greater than or equal to 0")
+	}
+
+	return nil
 }
 
 func Get() *MainRepoConfig {

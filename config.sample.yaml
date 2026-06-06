@@ -543,6 +543,14 @@ rateLimit:
       # is smaller.
       overflowLimitBytes: 104857600 # 100mb default (the same as the default remote download maxBytes)
 
+# @see cache_control.go SetMediaCacheControlHeaders()
+cacheControl:
+  # The number of seconds to cache media on the client side. This is used in the Cache-Control
+  # header for media responses. Set to zero to disable caching on the client side.
+  maxAgeSeconds: 259200
+  # The number of seconds to cache media on the cdn or any other caching layer between the media repo and the client. 
+  # This is used in the Cache-Control header for media responses. Set to zero to disable caching on the cdn or other caching layers.
+  sMaxAgeSeconds: 259200
 
 # Identicons are generated avatars for a given username. Some clients use these to give users a
 # default avatar after signing up. Identicons are not part of the official matrix spec, therefore

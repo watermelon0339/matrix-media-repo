@@ -9,6 +9,7 @@ type MainRepoConfig struct {
 	Downloads         MainDownloadsConfig   `yaml:"downloads"`
 	Thumbnails        MainThumbnailsConfig  `yaml:"thumbnails"`
 	UrlPreviews       MainUrlPreviewsConfig `yaml:"urlPreviews"`
+	CacheControl      CacheControlConfig    `yaml:"cacheControl"`
 	RateLimit         RateLimitConfig       `yaml:"rateLimit"`
 	Metrics           MetricsConfig         `yaml:"metrics"`
 	SharedSecret      SharedSecretConfig    `yaml:"sharedSecretAuth"`
@@ -85,6 +86,10 @@ func NewDefaultMainConfig() MainRepoConfig {
 			},
 			NumWorkers: 10,
 			ExpireDays: 0,
+		},
+		CacheControl: CacheControlConfig{
+			MaxAgeSeconds:  259200,
+			SMaxAgeSeconds: 259200,
 		},
 		Thumbnails: MainThumbnailsConfig{
 			ThumbnailsConfig: ThumbnailsConfig{

@@ -48,6 +48,11 @@ type MainUrlPreviewsConfig struct {
 	ExpireDays        int `yaml:"expireAfterDays"`
 }
 
+type CacheControlConfig struct {
+	MaxAgeSeconds  int64 `yaml:"maxAgeSeconds"`
+	SMaxAgeSeconds int64 `yaml:"sMaxAgeSeconds"`
+}
+
 type RateLimitConfig struct {
 	RequestsPerSecond float64                `yaml:"requestsPerSecond"`
 	Enabled           bool                   `yaml:"enabled"`

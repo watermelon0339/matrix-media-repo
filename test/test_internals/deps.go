@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -125,16 +125,12 @@ func MakeTestDeps() (*ContainerDeps, error) {
 	//extPgConnStr := fmt.Sprintf("host=%s port=%d user=postgres password=test1234 dbname=mmr sslmode=disable", testcontainers.HostInternal, pgExtPort.Int())
 
 	// Start a redis container
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
 	redisContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
 			Image:        "docker.io/library/redis:7",
 			ExposedPorts: []string{"6379/tcp"},
 			Mounts: []testcontainers.ContainerMount{
-				testcontainers.BindMount(path.Join(cwd, ".", "dev", "redis.conf"), "/usr/local/etc/redis/redis.conf"),
+				testcontainers.BindMount(filepath.Join(repoRootDir(), "dev", "redis.conf"), "/usr/local/etc/redis/redis.conf"),
 			},
 			Cmd:        []string{"redis-server", "/usr/local/etc/redis/redis.conf"},
 			Networks:   []string{depNet.NetId},
