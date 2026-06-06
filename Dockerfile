@@ -2,6 +2,12 @@
 # Builds media repo binaries
 FROM golang:1.22-alpine3.21 AS builder
 
+# Allow overriding Go module proxy settings at build time.
+ARG GOPROXY=https://goproxy.cn,direct
+ARG GOSUMDB=sum.golang.google.cn
+ENV GOPROXY=${GOPROXY}
+ENV GOSUMDB=${GOSUMDB}
+
 # Install build dependencies
 RUN apk add --no-cache git musl-dev dos2unix build-base libde265-dev
 

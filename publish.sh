@@ -5,6 +5,7 @@ set -euo pipefail
 #
 # Environment overrides:
 # - DOCKERHUB_USERNAME / DOCKERHUB_PASSWORD: if set, script will perform `docker login`
+# - GOPROXY / GOSUMDB: Go module proxy settings passed to docker build
 
 MMR_VERSION=$(git describe --tags)
 DOCKERHUB_REPO=watermelon0339/matrix-media-repo
@@ -39,7 +40,13 @@ if ! $BUILD; then
     echo "Skipping build step."
 else
     echo "Building image: ${LOCAL_IMAGE} (base MMR_VERSION=${MMR_VERSION})"
-    docker build -t "${LOCAL_IMAGE}" .
+    GO_PROXY="${GOPROXY:-https://goproxy.cn,direct}"
+    GO_SUM_DB="${GOSUMDB:-sum.golang.google.cn}"
+    echo "Using Go proxy settings: GOPROXY=${GO_PROXY} GOSUMDB=${GO_SUM_DB}"
+    docker build \
+        --build-arg GOPROXY="${GO_PROXY}" \
+        --build-arg GOSUMDB="${GO_SUM_DB}" \
+        -t "${LOCAL_IMAGE}" .
     echo "Tagging ${LOCAL_IMAGE} -> ${REMOTE_IMAGE}"
     docker tag "${LOCAL_IMAGE}" "${REMOTE_IMAGE}"
 fi

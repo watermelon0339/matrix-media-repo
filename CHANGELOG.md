@@ -9,7 +9,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 *Nothing yet*
 
-### [1.3.8] - January 16, 2025
+## [1.3.10] - June 6, 2026
+
+### Added
+
+* 增加 `cacheControl` 配置，允许浏览器和CDN缓存
+
+## [1.3.9] - December 28, 2025
+
+### Added
+
+* 支持根据最近访问时间删除媒体文件: `POST /_matrix/media/unstable/admin/purge/by_access?before_ts=1234567890&include_local=false&access_token=your_access_token`
+
+## [1.3.8] - January 16, 2025
 
 ### Security
 
