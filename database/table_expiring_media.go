@@ -19,6 +19,9 @@ func (r *DbExpiringMedia) IsExpired() bool {
 	return r.ExpiresTs < util.NowMillis()
 }
 
+// expiring_media 记录“预创建上传槽位”：media_id、所属 user 与过期时间。
+// 创建上传（create）会先写入该表，真正上传（upload）时校验未过期且 user 匹配后才允许写入 media 主表，
+// 成功上传后会删除该临时记录，用于约束异步上传窗口与 pending quota 统计。
 const insertExpiringMedia = "INSERT INTO expiring_media (origin, media_id, user_id, expires_ts) VALUES ($1, $2, $3, $4);"
 const selectExpiringMediaByUserCount = "SELECT COUNT(*) FROM expiring_media WHERE user_id = $1 AND expires_ts >= $2;"
 const selectExpiringMediaById = "SELECT origin, media_id, user_id, expires_ts FROM expiring_media WHERE origin = $1 AND media_id = $2;"

@@ -18,6 +18,9 @@ type DbRestrictedMedia struct {
 	ConditionValue string
 }
 
+// restricted_media 存储媒体访问限制规则（condition_type + condition_value）。
+// 当前主要用于 requires_authentication：下载/缩略图管线会先检查该表，未授权时拒绝访问。
+// 这是一张围绕 media 的策略扩展表，不保存媒体本体，仅定义读取时的鉴权条件。
 const insertRestrictedMedia = "INSERT INTO restricted_media (origin, media_id, condition_type, condition_value) VALUES ($1, $2, $3, $4);"
 const updateRestrictedMedia = "UPDATE restricted_media SET condition_type = $3, condition_value = $4 WHERE origin = $1 AND media_id = $2;"
 const selectRestrictedMedia = "SELECT origin, media_id, condition_type, condition_value FROM restricted_media WHERE origin = $1 AND media_id = $2;"

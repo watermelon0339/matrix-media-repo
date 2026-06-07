@@ -25,6 +25,9 @@ type DbThumbnail struct {
 	//Location    string
 }
 
+// thumbnails 是 media 的派生资源表：按宽高/方法/动画参数缓存缩略图及其存储位置。
+// 缩略图请求会先查该表命中复用，未命中才生成并落库；媒体 purge 与缩略图定时清理会联动删除相关记录/文件。
+// 该表与 media 通过 (origin, media_id) 关联，并共享 datastore/location 去做去重与安全删除判断。
 const selectThumbnailByParams = "SELECT origin, media_id, content_type, width, height, method, animated, sha256_hash, size_bytes, creation_ts, datastore_id, location FROM thumbnails WHERE origin = $1 AND media_id = $2 AND width = $3 AND height = $4 AND method = $5 AND animated = $6;"
 const insertThumbnail = "INSERT INTO thumbnails (origin, media_id, content_type, width, height, method, animated, sha256_hash, size_bytes, creation_ts, datastore_id, location) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);"
 const selectThumbnailByLocationExists = "SELECT TRUE FROM thumbnails WHERE datastore_id = $1 AND location = $2 LIMIT 1;"

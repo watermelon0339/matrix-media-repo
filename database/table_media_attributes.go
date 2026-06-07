@@ -24,6 +24,9 @@ func IsPurpose(purpose Purpose) bool {
 	return purpose == PurposeNone || purpose == PurposePinned
 }
 
+// media_attributes 是 media 的附加属性表，目前主要用于记录 purpose（如 pinned）。
+// 清理/隔离流程会读取该表：被标记为 pinned 的媒体会跳过部分批量操作，避免被误删或误隔离。
+// 使用案例：purpose=pinned 用户保留 sticker 贴纸，这样在 purge 时就不会被删除掉。
 const selectMediaAttributes = "SELECT origin, media_id, purpose FROM media_attributes WHERE origin = $1 AND media_id = $2;"
 const upsertMediaPurpose = "INSERT INTO media_attributes (origin, media_id, purpose) VALUES ($1, $2, $3) ON CONFLICT (origin, media_id) DO UPDATE SET purpose = $3;"
 

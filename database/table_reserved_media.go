@@ -13,6 +13,9 @@ type DbReservedMedia struct {
 	Reason  string
 }
 
+// reserved_media 用于记录“已被系统保留/不应复用”的媒体 ID（如 purge 后的本地 media_id）。
+// 上传创建新 media_id 时会先检查该表，避免历史已删除但应屏蔽的 ID 被再次分配。
+// 它与 media_id_hold 一起参与 ID 冲突防护：hold 负责短期占位，reserved 负责长期禁用。
 const insertReservedMediaNoConflict = "INSERT INTO reserved_media (origin, media_id, reason) VALUES ($1, $2, $3) ON CONFLICT (origin, media_id) DO NOTHING;"
 const selectReservedMediaExists = "SELECT TRUE FROM reserved_media WHERE origin = $1 AND media_id = $2 LIMIT 1;"
 

@@ -17,6 +17,9 @@ type DbHeldMedia struct {
 type HeldReason string
 
 const (
+	// media_id_hold 用于在媒体创建流程中临时占位 media_id，避免并发下重复分配同一 ID。
+	// 占位记录在生成 ID 时写入，依赖 (media_id, origin) 唯一约束提供冲突保护。
+	// 记录不会立即删除，会由后台定时任务按 held_ts 进行延迟清理（默认 7 天）。
 	ForCreateHeldReason HeldReason = "media_create"
 )
 

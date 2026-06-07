@@ -29,6 +29,9 @@ type DbMedia struct {
 	//Location    string
 }
 
+// media 是媒体元数据主表：一条记录对应一个可下载媒体对象（含哈希、归属用户、存储位置、隔离状态）。
+// 其他媒体相关表围绕它扩展：thumbnails 记录派生缩略图，media_attributes 记录附加用途标记，
+// restricted_media 记录访问限制，expiring_media/hold/reserved 参与上传创建阶段与 ID 生命周期控制。
 const selectDistinctMediaDatastoreIds = "SELECT DISTINCT datastore_id FROM media;"
 const selectMediaIsQuarantinedByHash = "SELECT quarantined FROM media WHERE quarantined = TRUE AND sha256_hash = $1;"
 const selectMediaByHash = "SELECT origin, media_id, upload_name, content_type, user_id, sha256_hash, size_bytes, creation_ts, quarantined, datastore_id, location FROM media WHERE sha256_hash = $1;"
@@ -52,27 +55,27 @@ const selectMediaByQuarantine = "SELECT origin, media_id, upload_name, content_t
 const selectMediaByQuarantineAndOrigin = "SELECT origin, media_id, upload_name, content_type, user_id, sha256_hash, size_bytes, creation_ts, quarantined, datastore_id, location FROM media WHERE quarantined = TRUE AND origin = $1;"
 
 type mediaTableStatements struct {
-	selectDistinctMediaDatastoreIds  *sql.Stmt
-	selectMediaIsQuarantinedByHash   *sql.Stmt
-	selectMediaByHash                *sql.Stmt
-	insertMedia                      *sql.Stmt
-	selectMediaExists                *sql.Stmt
-	selectMediaById                  *sql.Stmt
-	selectMediaByUserId              *sql.Stmt
-	selectOldMediaByUserId           *sql.Stmt
-	selectMediaByOrigin              *sql.Stmt
-	selectOldMediaByOrigin           *sql.Stmt
-	selectMediaByLocationExists      *sql.Stmt
-	selectMediaByUserCount           *sql.Stmt
-	selectMediaByOriginAndUserIds    *sql.Stmt
-	selectMediaByOriginAndIds        *sql.Stmt
-	selectOldMediaExcludingDomains   *sql.Stmt
+	selectDistinctMediaDatastoreIds            *sql.Stmt
+	selectMediaIsQuarantinedByHash             *sql.Stmt
+	selectMediaByHash                          *sql.Stmt
+	insertMedia                                *sql.Stmt
+	selectMediaExists                          *sql.Stmt
+	selectMediaById                            *sql.Stmt
+	selectMediaByUserId                        *sql.Stmt
+	selectOldMediaByUserId                     *sql.Stmt
+	selectMediaByOrigin                        *sql.Stmt
+	selectOldMediaByOrigin                     *sql.Stmt
+	selectMediaByLocationExists                *sql.Stmt
+	selectMediaByUserCount                     *sql.Stmt
+	selectMediaByOriginAndUserIds              *sql.Stmt
+	selectMediaByOriginAndIds                  *sql.Stmt
+	selectOldMediaExcludingDomains             *sql.Stmt
 	selectOldMediaByLastAccessExcludingDomains *sql.Stmt
-	deleteMedia                      *sql.Stmt
-	updateMediaLocation              *sql.Stmt
-	selectMediaByLocation            *sql.Stmt
-	selectMediaByQuarantine          *sql.Stmt
-	selectMediaByQuarantineAndOrigin *sql.Stmt
+	deleteMedia                                *sql.Stmt
+	updateMediaLocation                        *sql.Stmt
+	selectMediaByLocation                      *sql.Stmt
+	selectMediaByQuarantine                    *sql.Stmt
+	selectMediaByQuarantineAndOrigin           *sql.Stmt
 }
 
 type MediaTableWithContext struct {
